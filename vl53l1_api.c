@@ -1,6 +1,7 @@
 
 /*
 * Copyright (c) 2017, STMicroelectronics - All Rights Reserved
+* Modified by Pololu Corporation, 2018
 *
 * This file is part of VL53L1 Core and is dual licensed,
 * either 'STMicroelectronics
@@ -452,10 +453,10 @@ static VL53L1_Error SingleTargetXTalkCalibration(VL53L1_DEV Dev)
 	if (total_count > 0) {
 		/* FixPoint1616_t / uint16_t = FixPoint1616_t */
 		xTalkStoredMeanSignalRate = sum_signalRate / total_count;
-		xTalkStoredMeanRange = (FixPoint1616_t)((uint32_t)(
-			sum_ranging << 16) / total_count);
-		xTalkStoredMeanRtnSpads = (FixPoint1616_t)((uint32_t)(
-			sum_spads << 16) / total_count);
+		xTalkStoredMeanRange = (FixPoint1616_t)((
+			(uint32_t)sum_ranging << 16) / total_count);
+		xTalkStoredMeanRtnSpads = (FixPoint1616_t)((
+			(uint32_t)sum_spads << 16) / total_count);
 
 		/* Round Mean Spads to Whole Number.
 		 * Typically the calculated mean SPAD count is a whole number
@@ -752,6 +753,8 @@ VL53L1_Error VL53L1_SetDeviceAddress(VL53L1_DEV Dev, uint8_t DeviceAddress)
 	LOG_FUNCTION_END(Status);
 	return Status;
 }
+
+#define USE_I2C_2V8
 
 VL53L1_Error VL53L1_DataInit(VL53L1_DEV Dev)
 {
@@ -2732,9 +2735,9 @@ VL53L1_Error VL53L1_SetThresholdConfig(VL53L1_DEV Dev,
 				/* gain is ufix 5.11, convert to 16.16 */
 				gain = (FixPoint1616_t) (g << 5);
 				high1616 = (FixPoint1616_t)
-						(pConfig->Distance.High << 16);
+						((uint32_t)pConfig->Distance.High << 16);
 				low1616 = (FixPoint1616_t)
-						(pConfig->Distance.Low << 16);
+						((uint32_t)pConfig->Distance.Low << 16);
 				/* +32768 to round the results*/
 				high1616 = (high1616 + 32768) / gain;
 				low1616 = (low1616 + 32768) / gain;

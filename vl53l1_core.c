@@ -1,5 +1,6 @@
 /*
 * Copyright (c) 2017, STMicroelectronics - All Rights Reserved
+* Modified by Pololu Corporation, 2018
 *
 * This file is part of VL53L1 Core and is dual licensed,
 * either 'STMicroelectronics
@@ -2297,7 +2298,7 @@ VL53L1_Error VL53L1_low_power_auto_update_DSS(
 
 		/* get the target rate and shift up by 16
 		 * format 9.23 */
-		utemp32a = pdev->stat_cfg.dss_config__target_total_rate_mcps <<
+		utemp32a = (uint32_t)pdev->stat_cfg.dss_config__target_total_rate_mcps <<
 			16;
 
 		/* check for divide by zero */
