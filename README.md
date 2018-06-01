@@ -8,7 +8,7 @@ carrier][product]. It includes an example sketch adapted from ST's
 To load the sketch, open the file **vl53l1x-st-api.ino** in the vl53l1x-st-api
 directory.
 
-We have also released a more basic [VL53L1X library for Arduino](lib) that is
+We have also released a more basic [VL53L1X library for Arduino][lib] that is
 intended to provide a quicker and easier way to get started using the VL53L1X
 with an Arduino-compatible controller, in contrast to using this API from ST.
 The library has a more streamlined interface, as well as smaller storage and
