@@ -1,6 +1,7 @@
 
 /*
 * Copyright (c) 2017, STMicroelectronics - All Rights Reserved
+* Modified by Pololu Corporation, 2018
 *
 * This file is part of VL53L1 Core and is dual licensed,
 * either 'STMicroelectronics
@@ -754,6 +755,8 @@ VL53L1_Error VL53L1_SetDeviceAddress(VL53L1_DEV Dev, uint8_t DeviceAddress)
 	LOG_FUNCTION_END(Status);
 	return Status;
 }
+
+#define USE_I2C_2V8
 
 VL53L1_Error VL53L1_DataInit(VL53L1_DEV Dev)
 {

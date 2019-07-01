@@ -1,5 +1,6 @@
 /*
 * Copyright (c) 2017, STMicroelectronics - All Rights Reserved
+* Modified by Pololu Corporation, 2018
 *
 * This file is part of VL53L1 Core and is dual licensed,
 * either 'STMicroelectronics
@@ -111,7 +112,7 @@ uint32_t VL53L1_calc_pll_period_us(
 
 	LOG_FUNCTION_START("");
 
-	pll_period_us = (0x01 << 30) / fast_osc_frequency;
+	pll_period_us = ((uint32_t)0x01 << 30) / fast_osc_frequency;
 
 #ifdef VL53L1_LOGGING
 	trace_print(VL53L1_TRACE_LEVEL_DEBUG,
