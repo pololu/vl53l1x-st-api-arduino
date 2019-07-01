@@ -55,6 +55,7 @@ void setup()
 
   Wire.begin();
   Wire.setClock(400000);
+  Serial.begin(115200);
 
   Dev->I2cDevAddr = 0x52;
 
