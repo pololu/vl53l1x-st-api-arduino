@@ -44,8 +44,22 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Wire.h>
 #include "vl53l1_api.h"
 
+
+#define USE_BLOCKING_LOOP
+
+// budget given through VL53L1_SetMeasurementTimingBudgetMicroSeconds. 
+#define MEASUREMENT_BUDGET_MS 50
+// interval between measurements, set through VL53L1_SetInterMeasurementPeriodMilliSeconds. The minimum inter-measurement period must be longer than the timing budget + 4 ms.
+// reduced to 55 ms from 500 ms in ST example
+#define INTER_MEASUREMENT_PERIOD_MS 55
+
+// The device
 VL53L1_Dev_t                   dev;
 VL53L1_DEV                     Dev = &dev;
+#ifndef USE_BLOCKING_LOOP
+// one timer per device
+unsigned long dev_measurement_start;
+#endif
 int status;
 
 void setup()
@@ -57,7 +71,7 @@ void setup()
   Wire.setClock(400000);
   Serial.begin(115200);
 
-  Dev->I2cDevAddr = 0x52;
+  Dev->I2cDevAddr = 0x52; // 0x52 is the default 'unshifted 7-bit address', equivalent to 0x29 for the Arduino Wire lib.
 
   VL53L1_software_reset(Dev);
 
@@ -76,8 +90,8 @@ void setup()
   status = VL53L1_DataInit(Dev);
   status = VL53L1_StaticInit(Dev);
   status = VL53L1_SetDistanceMode(Dev, VL53L1_DISTANCEMODE_LONG);
-  status = VL53L1_SetMeasurementTimingBudgetMicroSeconds(Dev, 50000);
-  status = VL53L1_SetInterMeasurementPeriodMilliSeconds(Dev, 50); // reduced to 50 ms from 500 ms in ST example
+  status = VL53L1_SetMeasurementTimingBudgetMicroSeconds(Dev, MEASUREMENT_BUDGET_MS * 1000);
+  status = VL53L1_SetInterMeasurementPeriodMilliSeconds(Dev, INTER_MEASUREMENT_PERIOD_MS); 
   status = VL53L1_StartMeasurement(Dev);
 
   if(status)
@@ -85,12 +99,19 @@ void setup()
     Serial.println(F("VL53L1_StartMeasurement failed"));
     while(1);
   }
+#ifndef USE_BLOCKING_LOOP
+  // init the timer loop
+  dev_measurement_start = millis();
+#endif
 }
 
 void loop()
 {
   static VL53L1_RangingMeasurementData_t RangingData;
 
+#ifdef USE_BLOCKING_LOOP
+
+  // blocking
   status = VL53L1_WaitMeasurementDataReady(Dev);
   if(!status)
   {
@@ -112,4 +133,52 @@ void loop()
     Serial.print(F("error waiting for data ready: "));
     Serial.println(status);
   }
+#else
+  uint8_t isReady;
+
+  // non blocking
+  status = VL53L1_GetMeasurementDataReady(Dev,&isReady);
+  if(!status)
+  {
+    // Check for end of conversion or timeout (this handles overflow)
+    if (isReady || ((millis() - dev_measurement_start) > VL53L1_RANGE_COMPLETION_POLLING_TIMEOUT_MS))
+    {
+      if (!isReady) 
+      {
+        // this is only on a timeout
+        Serial.println(F("Timeout waiting for data ready."));
+        // maybe we should restart all. When you do that, first go by VL53L1_StopMeasurement(Dev);
+      } 
+      else
+      {
+        // ready, so I have data
+        status = VL53L1_GetRangingMeasurementData(Dev, &RangingData);
+        if(status==0)
+        {
+          Serial.print(RangingData.RangeStatus);
+          Serial.print(F(","));
+          Serial.print(RangingData.RangeMilliMeter);
+          Serial.print(F(","));
+          Serial.print(RangingData.SignalRateRtnMegaCps/65536.0);
+          Serial.print(F(","));
+          Serial.println(RangingData.AmbientRateRtnMegaCps/65336.0);
+        }
+        else
+        {
+          Serial.print(F("error reading data: "));
+          Serial.println(status);
+        }
+      }
+      // restart the measurement
+      status = VL53L1_ClearInterruptAndStartMeasurement(Dev);
+      dev_measurement_start = millis();
+    } 
+  }
+  else
+  {
+    Serial.print(F("error waiting for data ready: "));
+    Serial.println(status);
+  }
+  delay(10); // poll delay. Whatever you like, but should be a fraction of INTER_MEASUREMENT_PERIOD_MS, and MUST be smaller than VL53L1_RANGE_COMPLETION_POLLING_TIMEOUT_MS
+#endif
 }
