@@ -44,22 +44,23 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Wire.h>
 #include "vl53l1_api.h"
 
-
+// By default, this example blocks while waiting for sensor data to be ready.
+// Comment out this line to poll for data ready in a non-blocking way instead.
 #define USE_BLOCKING_LOOP
 
-// budget given through VL53L1_SetMeasurementTimingBudgetMicroSeconds. 
+// Timing budget set through VL53L1_SetMeasurementTimingBudgetMicroSeconds().
 #define MEASUREMENT_BUDGET_MS 50
-// interval between measurements, set through VL53L1_SetInterMeasurementPeriodMilliSeconds. The minimum inter-measurement period must be longer than the timing budget + 4 ms.
-// reduced to 55 ms from 500 ms in ST example
+
+// Interval between measurements, set through
+// VL53L1_SetInterMeasurementPeriodMilliSeconds(). According to the API user
+// manual (rev 2), "the minimum inter-measurement period must be longer than the
+// timing budget + 4 ms." The STM32Cube example from ST uses 500 ms, but we
+// reduce this to 55 ms to allow faster readings.
 #define INTER_MEASUREMENT_PERIOD_MS 55
 
-// The device
 VL53L1_Dev_t                   dev;
 VL53L1_DEV                     Dev = &dev;
-#ifndef USE_BLOCKING_LOOP
-// one timer per device
-unsigned long dev_measurement_start;
-#endif
+
 int status;
 
 void setup()
@@ -71,7 +72,10 @@ void setup()
   Wire.setClock(400000);
   Serial.begin(115200);
 
-  Dev->I2cDevAddr = 0x52; // 0x52 is the default 'unshifted 7-bit address', equivalent to 0x29 for the Arduino Wire lib.
+  // This is the default 8-bit slave address (including R/W as the least
+  // significant bit) as expected by the API. Note that the Arduino Wire library
+  // uses a 7-bit address without the R/W bit instead (0x29 or 0b0101001).
+  Dev->I2cDevAddr = 0x52;
 
   VL53L1_software_reset(Dev);
 
@@ -91,7 +95,7 @@ void setup()
   status = VL53L1_StaticInit(Dev);
   status = VL53L1_SetDistanceMode(Dev, VL53L1_DISTANCEMODE_LONG);
   status = VL53L1_SetMeasurementTimingBudgetMicroSeconds(Dev, MEASUREMENT_BUDGET_MS * 1000);
-  status = VL53L1_SetInterMeasurementPeriodMilliSeconds(Dev, INTER_MEASUREMENT_PERIOD_MS); 
+  status = VL53L1_SetInterMeasurementPeriodMilliSeconds(Dev, INTER_MEASUREMENT_PERIOD_MS);
   status = VL53L1_StartMeasurement(Dev);
 
   if(status)
@@ -99,86 +103,75 @@ void setup()
     Serial.println(F("VL53L1_StartMeasurement failed"));
     while(1);
   }
-#ifndef USE_BLOCKING_LOOP
-  // init the timer loop
-  dev_measurement_start = millis();
-#endif
 }
 
 void loop()
 {
-  static VL53L1_RangingMeasurementData_t RangingData;
-
 #ifdef USE_BLOCKING_LOOP
 
-  // blocking
+  // blocking wait for data ready
   status = VL53L1_WaitMeasurementDataReady(Dev);
+
   if(!status)
   {
-    status = VL53L1_GetRangingMeasurementData(Dev, &RangingData);
-    if(status==0)
-    {
-      Serial.print(RangingData.RangeStatus);
-      Serial.print(F(","));
-      Serial.print(RangingData.RangeMilliMeter);
-      Serial.print(F(","));
-      Serial.print(RangingData.SignalRateRtnMegaCps/65536.0);
-      Serial.print(F(","));
-      Serial.println(RangingData.AmbientRateRtnMegaCps/65336.0);
-    }
-    status = VL53L1_ClearInterruptAndStartMeasurement(Dev);
+    printRangingData();
+    VL53L1_ClearInterruptAndStartMeasurement(Dev);
   }
   else
   {
-    Serial.print(F("error waiting for data ready: "));
+    Serial.print(F("Error waiting for data ready: "));
     Serial.println(status);
   }
+
 #else
+
+  static uint16_t startMs = millis();
   uint8_t isReady;
 
-  // non blocking
-  status = VL53L1_GetMeasurementDataReady(Dev,&isReady);
+  // non-blocking check for data ready
+  status = VL53L1_GetMeasurementDataReady(Dev, &isReady);
+
   if(!status)
   {
-    // Check for end of conversion or timeout (this handles overflow)
-    if (isReady || ((millis() - dev_measurement_start) > VL53L1_RANGE_COMPLETION_POLLING_TIMEOUT_MS))
+    if(isReady)
     {
-      if (!isReady) 
-      {
-        // this is only on a timeout
-        Serial.println(F("Timeout waiting for data ready."));
-        // maybe we should restart all. When you do that, first go by VL53L1_StopMeasurement(Dev);
-      } 
-      else
-      {
-        // ready, so I have data
-        status = VL53L1_GetRangingMeasurementData(Dev, &RangingData);
-        if(status==0)
-        {
-          Serial.print(RangingData.RangeStatus);
-          Serial.print(F(","));
-          Serial.print(RangingData.RangeMilliMeter);
-          Serial.print(F(","));
-          Serial.print(RangingData.SignalRateRtnMegaCps/65536.0);
-          Serial.print(F(","));
-          Serial.println(RangingData.AmbientRateRtnMegaCps/65336.0);
-        }
-        else
-        {
-          Serial.print(F("error reading data: "));
-          Serial.println(status);
-        }
-      }
-      // restart the measurement
-      status = VL53L1_ClearInterruptAndStartMeasurement(Dev);
-      dev_measurement_start = millis();
-    } 
+      printRangingData();
+      VL53L1_ClearInterruptAndStartMeasurement(Dev);
+      startMs = millis();
+    }
+    else if((uint16_t)(millis() - startMs) > VL53L1_RANGE_COMPLETION_POLLING_TIMEOUT_MS)
+    {
+      Serial.print(F("Timeout waiting for data ready."));
+      VL53L1_ClearInterruptAndStartMeasurement(Dev);
+      startMs = millis();
+    }
   }
   else
   {
-    Serial.print(F("error waiting for data ready: "));
+    Serial.print(F("Error getting data ready: "));
     Serial.println(status);
   }
-  delay(10); // poll delay. Whatever you like, but should be a fraction of INTER_MEASUREMENT_PERIOD_MS, and MUST be smaller than VL53L1_RANGE_COMPLETION_POLLING_TIMEOUT_MS
+
+  // Optional polling delay; should be smaller than INTER_MEASUREMENT_PERIOD_MS,
+  // and MUST be smaller than VL53L1_RANGE_COMPLETION_POLLING_TIMEOUT_MS
+  delay(10);
+
 #endif
+}
+
+void printRangingData()
+{
+  static VL53L1_RangingMeasurementData_t RangingData;
+
+  status = VL53L1_GetRangingMeasurementData(Dev, &RangingData);
+  if(!status)
+  {
+    Serial.print(RangingData.RangeStatus);
+    Serial.print(F(","));
+    Serial.print(RangingData.RangeMilliMeter);
+    Serial.print(F(","));
+    Serial.print(RangingData.SignalRateRtnMegaCps/65536.0);
+    Serial.print(F(","));
+    Serial.println(RangingData.AmbientRateRtnMegaCps/65336.0);
+  }
 }
