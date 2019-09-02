@@ -121,7 +121,7 @@ This file is derived from vl53l1_platform.c in the STSW-IMG007 VL53L1X API.
 
 VL53L1_Error VL53L1_WriteMulti(VL53L1_DEV Dev, uint16_t index, uint8_t *pdata, uint32_t count)
 {
-  while (count > 0)
+  while (1)
   {
     Wire.beginTransmission(Dev->I2cDevAddr >> 1);
     Wire.write((index >> 8) & 0xff);
@@ -138,6 +138,13 @@ VL53L1_Error VL53L1_WriteMulti(VL53L1_DEV Dev, uint16_t index, uint8_t *pdata, u
 
     if (writing == 0 || Wire.endTransmission() != 0) { return VL53L1_ERROR_CONTROL_INTERFACE; }
     index += writing;
+
+    if (count <= 0) {
+      break;
+    } else {
+      // sometimes vl53l1x write more than TowWire buffer length, need a flush.
+      Wire.flush();
+    }
   }
 
   return VL53L1_ERROR_NONE;
