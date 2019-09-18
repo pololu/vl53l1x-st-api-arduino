@@ -649,7 +649,7 @@ VL53L1_Error VL53L1_GetLimitCheckCurrent(VL53L1_DEV Dev,
  * @return  "Other error code"           See ::VL53L1_Error
  */
 VL53L1_Error VL53L1_SetUserROI(VL53L1_DEV Dev,
-		VL53L1_UserRoi_t *pUserROi);
+		const VL53L1_UserRoi_t *pUserROi);
 
 /**
  * @brief Get the ROI managed by the Device

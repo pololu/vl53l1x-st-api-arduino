@@ -1598,7 +1598,7 @@ VL53L1_Error VL53L1_GetLimitCheckCurrent(VL53L1_DEV Dev, uint16_t LimitCheckId,
 /* Group ROI Functions */
 
 VL53L1_Error VL53L1_SetUserROI(VL53L1_DEV Dev,
-		VL53L1_UserRoi_t *pRoi)
+		const VL53L1_UserRoi_t *pRoi)
 {
 	VL53L1_Error Status = VL53L1_ERROR_NONE;
 	VL53L1_user_zone_t user_zone;
