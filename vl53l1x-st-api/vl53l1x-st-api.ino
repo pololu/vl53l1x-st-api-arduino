@@ -65,8 +65,8 @@ int status;
 
 void setup()
 {
-  uint8_t byteData;
-  uint16_t wordData;
+  uint8_t byteData = 0;
+  uint16_t wordData = 0;
 
   Wire.begin();
   Wire.setClock(400000);
