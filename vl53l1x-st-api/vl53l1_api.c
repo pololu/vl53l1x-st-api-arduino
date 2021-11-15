@@ -388,7 +388,7 @@ static VL53L1_Error VL53L1_read_nvm_raw_data(
 
 }
 
-static VL53L1_Error SingleTargetXTalkCalibration(VL53L1_DEV Dev)
+static VL53L1_Error SingleTargetXTalkCalibration(VL53L1_DEV Dev, uint8_t deviceResultsLevel)
 {
 	VL53L1_Error Status = VL53L1_ERROR_NONE;
 
@@ -441,7 +441,7 @@ static VL53L1_Error SingleTargetXTalkCalibration(VL53L1_DEV Dev)
 	total_count = 0;
 	for (xtalk_meas = 0; xtalk_meas < xtalk_measmax; xtalk_meas++) {
 		VL53L1_WaitMeasurementDataReady(Dev);
-		VL53L1_GetRangingMeasurementData(Dev, &RMData);
+		VL53L1_GetRangingMeasurementData(Dev, &RMData, deviceResultsLevel);
 		VL53L1_ClearInterruptAndStartMeasurement(Dev);
 		if (RMData.RangeStatus == VL53L1_RANGESTATUS_RANGE_VALID) {
 			sum_ranging += RMData.RangeMilliMeter;
@@ -2160,7 +2160,7 @@ static VL53L1_Error SetSimpleData(VL53L1_DEV Dev,
 
 
 VL53L1_Error VL53L1_GetRangingMeasurementData(VL53L1_DEV Dev,
-	VL53L1_RangingMeasurementData_t *pRangingMeasurementData)
+	VL53L1_RangingMeasurementData_t *pRangingMeasurementData, uint8_t deviceResultsLevel)
 {
 	VL53L1_Error Status = VL53L1_ERROR_NONE;
 	VL53L1_range_results_t       results;
@@ -2177,7 +2177,7 @@ VL53L1_Error VL53L1_GetRangingMeasurementData(VL53L1_DEV Dev,
 	/* Get Ranging Data */
 	Status = VL53L1_get_device_results(
 			Dev,
-			VL53L1_DEVICERESULTSLEVEL_FULL,
+			deviceResultsLevel,
 			presults);
 
 	if (Status == VL53L1_ERROR_NONE) {
@@ -2365,7 +2365,7 @@ VL53L1_Error VL53L1_GetXTalkCompensationEnable(VL53L1_DEV Dev,
 }
 
 VL53L1_Error VL53L1_PerformSingleTargetXTalkCalibration(VL53L1_DEV Dev,
-		int32_t CalDistanceMilliMeter)
+		int32_t CalDistanceMilliMeter, uint8_t deviceResultsLevel)
 {
 	VL53L1_Error Status = VL53L1_ERROR_NONE;
 
@@ -2374,7 +2374,7 @@ VL53L1_Error VL53L1_PerformSingleTargetXTalkCalibration(VL53L1_DEV Dev,
 	if (CalDistanceMilliMeter > 0) {
 		BDTable[VL53L1_TUNING_SINGLE_TARGET_XTALK_TARGET_DISTANCE_MM] =
 				CalDistanceMilliMeter;
-		Status = SingleTargetXTalkCalibration(Dev);
+		Status = SingleTargetXTalkCalibration(Dev, deviceResultsLevel);
 	} else
 		Status = VL53L1_ERROR_INVALID_PARAMS;
 
@@ -2458,7 +2458,7 @@ VL53L1_Error VL53L1_PerformOffsetCalibration(VL53L1_DEV Dev,
 #endif
 
 VL53L1_Error VL53L1_PerformOffsetSimpleCalibration(VL53L1_DEV Dev,
-	int32_t CalDistanceMilliMeter)
+	int32_t CalDistanceMilliMeter, uint8_t deviceResultsLevel)
 {
 	VL53L1_Error Status = VL53L1_ERROR_NONE;
 	int32_t sum_ranging;
@@ -2494,7 +2494,7 @@ VL53L1_Error VL53L1_PerformOffsetSimpleCalibration(VL53L1_DEV Dev,
 			Status = VL53L1_WaitMeasurementDataReady(Dev);
 		if (Status == VL53L1_ERROR_NONE)
 			Status = VL53L1_GetRangingMeasurementData(Dev,
-						&RangingMeasurementData);
+						&RangingMeasurementData, deviceResultsLevel);
 		if (Status == VL53L1_ERROR_NONE)
 			Status = VL53L1_ClearInterruptAndStartMeasurement(Dev);
 		/* offset calibration main loop */
@@ -2505,7 +2505,7 @@ VL53L1_Error VL53L1_PerformOffsetSimpleCalibration(VL53L1_DEV Dev,
 			Status = VL53L1_WaitMeasurementDataReady(Dev);
 			if (Status == VL53L1_ERROR_NONE)
 				Status = VL53L1_GetRangingMeasurementData(Dev,
-						&RangingMeasurementData);
+						&RangingMeasurementData, deviceResultsLevel);
 			goodmeas = (RangingMeasurementData.RangeStatus ==
 					VL53L1_RANGESTATUS_RANGE_VALID);
 			if ((Status == VL53L1_ERROR_NONE) && goodmeas) {

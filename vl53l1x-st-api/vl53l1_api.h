@@ -873,7 +873,7 @@ VL53L1_Error VL53L1_WaitMeasurementDataReady(VL53L1_DEV Dev);
  * @return  "Other error code"       See ::VL53L1_Error
  */
 VL53L1_Error VL53L1_GetRangingMeasurementData(VL53L1_DEV Dev,
-	VL53L1_RangingMeasurementData_t *pRangingMeasurementData);
+	VL53L1_RangingMeasurementData_t *pRangingMeasurementData, uint8_t deviceResultLevel);
 
 
 
@@ -996,7 +996,7 @@ VL53L1_Error VL53L1_GetXTalkCompensationEnable(VL53L1_DEV Dev,
  * @return  "Other error code"   See ::VL53L1_Error
  */
 VL53L1_Error VL53L1_PerformSingleTargetXTalkCalibration(VL53L1_DEV Dev,
-		int32_t CalDistanceMilliMeter);
+		int32_t CalDistanceMilliMeter, uint8_t deviceResultLevel);
 
 
 /**
@@ -1067,7 +1067,7 @@ VL53L1_Error VL53L1_PerformOffsetCalibration(VL53L1_DEV Dev,
  * @return  "Other error code"   See ::VL53L1_Error
  */
 VL53L1_Error VL53L1_PerformOffsetSimpleCalibration(VL53L1_DEV Dev,
-		int32_t CalDistanceMilliMeter);
+		int32_t CalDistanceMilliMeter, uint8_t deviceResultLevel);
 
 /**
  * @brief Sets the Calibration Data.
