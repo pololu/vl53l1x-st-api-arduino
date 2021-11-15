@@ -163,7 +163,7 @@ void printRangingData()
 {
   static VL53L1_RangingMeasurementData_t RangingData;
 
-  status = VL53L1_GetRangingMeasurementData(Dev, &RangingData);
+  status = VL53L1_GetRangingMeasurementData(Dev, &RangingData, VL53L1_DEVICERESULTSLEVEL_FULL);
   if(!status)
   {
     Serial.print(RangingData.RangeStatus);
